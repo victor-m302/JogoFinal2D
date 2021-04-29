@@ -1,2 +1,1 @@
-# JogoFinal2D
- Insira o nome do jogo
+# Jogo Final 2D
