@@ -4,12 +4,35 @@ import random
 import settings
 import engine
 
+tile0 = pygame.image.load('./assets/tiles/tile0.png').convert()
+tile1 = pygame.image.load('./assets/tiles/tile1.png').convert()
+tile2 = pygame.image.load('./assets/tiles/tile2.png').convert()
+tile3 = pygame.image.load('./assets/tiles/tile3.png').convert()
+tile4 = pygame.image.load('./assets/tiles/tile4.png').convert()
+
+game_map = [['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','0','0','0','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
+            ['0','0','0','0','0','0','0','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','0','0','0','0','0','0','0','0','0','0','0','0'],
+            ['1','1','1','1','1','1','1','0','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','0','1','1','1','1','1','1','1','1','1','1','1','1'],
+            ['4','2','2','2','2','2','4','1','0','0','0','0','0','0','0','0','0','0','0','1','2','2','2','2','2','2','2','2','2','2','2','2'],
+            ['2','3','3','2','3','3','2','2','1','1','1','1','1','1','1','1','1','1','1','2','3','3','3','3','3','3','4','3','3','2','3','3'],
+            ['2','3','4','3','3','3','3','3','2','2','4','3','3','2','2','2','2','2','3','3','3','3','3','4','3','2','3','3','3','3','3','4'],
+            ['2','3','3','3','3','2','3','3','3','3','3','2','3','3','3','3','4','3','3','3','2','3','3','3','3','3','3','3','3','3','3','3'],
+            ['2','3','3','4','3','3','3','3','3','2','3','3','3','3','4','3','3','3','3','3','3','3','3','3','3','3','3','2','3','3','3','3']]
+
 class GameState():
     def __init__(self):
         self.state = "menu"
         self.is_running = True
         self.background_group = pygame.sprite.Group()
-        self.moving_background_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.GroupSingle()
         self.game_manager = engine.GameManager(self.player_group)
 
@@ -17,9 +40,6 @@ class GameState():
         stars = engine.AutoMovingBackground("assets/backgrounds/stars.png", 0, 0, 1)
         self.background_group.add(farback)
         self.background_group.add(stars)
-
-        self.moving_background = engine.MovingBackground("assets/backgrounds/city.png", 0, 0)
-        self.moving_background_group.add(self.moving_background)
 
     def state_manager(self):
         if self.state == "menu":
@@ -98,12 +118,41 @@ class GameState():
         self.is_running = True
         settings.score = 0
 
-        player = engine.Player("assets/player/player", 6, 100, settings.screen_height, 2, 4, 0.05)
+        tile_rects = []
+        y = 0
+        for row in game_map:
+            x = 0
+            for tile in row:
+                if tile != '-1':
+                    tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
+                x += 1
+            y += 1
+
+        player = engine.Player("assets/player", 1, 100, 0, 2, 1, 0.05, tile_rects)
         self.player_group.add(player)
 
-        # self.game_manager.reset_game()
-
         while self.is_running:
+
+            settings.display.fill(settings.bg_color)
+
+            tile_rects= []
+            y = 0
+            for row in game_map:
+                x = 0
+                for tile in row:
+                    if tile == '0':
+                        settings.display.blit(tile0, (x * 16, y * 16))
+                    if tile == '1':
+                        settings.display.blit(tile1, (x * 16, y * 16))
+                    if tile == '2':
+                        settings.display.blit(tile2, (x * 16, y * 16))
+                    if tile == '3':
+                        settings.display.blit(tile3, (x * 16, y * 16))
+                    if tile == '4':
+                        settings.display.blit(tile4, (x * 16, y * 16))
+                    x += 1
+                y += 1
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -118,24 +167,23 @@ class GameState():
 
                     if event.key == pygame.K_LEFT:
                         player.movement_x -= player.speed
-                        self.moving_background.moving_speed -= player.speed/2
                     if event.key == pygame.K_RIGHT:
                         player.movement_x += player.speed
-                        self.moving_background.moving_speed += player.speed/2
+                    if event.key == pygame.K_UP:
+                        if player.air_timer < 6:
+                            player.momentum_y = -5
 
                 # se soltou alguma tecla
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_LEFT:
                         player.movement_x += player.speed
-                        self.moving_background.moving_speed += player.speed/2
                     if event.key == pygame.K_RIGHT:
                         player.movement_x -= player.speed
-                        self.moving_background.moving_speed -= player.speed/2
-
-            self.moving_background_group.draw(settings.screen)
-            self.moving_background_group.update()
-
+            
+            settings.screen.fill(settings.bg_color)
             self.game_manager.run_game()
+            surf = pygame.transform.scale(settings.display, (settings.screen_width, settings.screen_height))
+            settings.screen.blit(surf, (0, 0))
 
             pygame.display.update()
             settings.clock.tick(120)

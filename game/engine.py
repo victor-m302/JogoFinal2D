@@ -27,13 +27,16 @@ class AnimatedBlock(pygame.sprite.Sprite): # classe base
         self.rect.center = [x_pos, y_pos]
 
 class Player(AnimatedBlock):
-    def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize, speed, sprite_speed):
+    def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles):
         super().__init__(base_images_path, number_of_images, x_pos, y_pos, resize)
         self.speed = speed
         self.sprite_speed = sprite_speed 
         self.movement_y = 0 
         self.movement_x = 0 
         self.life = 3
+        self.momentum_y = 0
+        self.air_timer = 0   
+        self.tiles = tiles
     
     def screen_constrain(self):
         if self.rect.top <= 0:  
@@ -42,25 +45,65 @@ class Player(AnimatedBlock):
             self.rect.bottom = settings.screen_height 
         if self.rect.left <= 0:
             self.rect.left = 0
-        if self.rect.right >= settings.screen_width/2 + self.rect.width/2:
-            self.rect.right = settings.screen_width/2 + self.rect.width/2
+        if self.rect.right >= settings.screen_width:
+            self.rect.right = settings.screen_width
 
     def update(self):
-        print(settings.moving_bg)
-        if (settings.moving_bg >= 0 and self.movement_x > 0):
-            settings.moving_bg += self.movement_x
-        if (settings.moving_bg >= 10 and self.movement_x < 0):
-            settings.moving_bg += self.movement_x
-        self.rect.x += self.movement_x
-        
         self.current_sprite += self.sprite_speed
 
         if self.current_sprite >= len(self.sprites):
             self.current_sprite = 0
 
         self.image = self.sprites[int(self.current_sprite)]
+
+        player_movement = [0, 0]
+
+        player_movement[0] = self.movement_x
+        player_movement[1] = self.movement_y
+
+        player_movement[1] += self.momentum_y
+        self.momentum_y += 0.2
+        if self.momentum_y > 3:
+            self.momentum_y = 3
+
+        collisions = self.move(player_movement)
+
+        if collisions['bottom']:
+            self.momentum_y = 0
+            self.air_timer = 0
+        else:
+            self.air_timer += 1
         
-        self.screen_constrain() 
+        self.screen_constrain()
+    
+    def collision_test(self):
+        hit_list = []
+        for tile in self.tiles:
+            if self.rect.colliderect(tile):
+                hit_list.append(tile)
+        return hit_list
+
+    def move(self, movement):
+        collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
+        self.rect.x += movement[0]
+        hit_list = self.collision_test()
+        for tile in hit_list:
+            if movement[0] > 0:
+                self.rect.right = tile.left
+                collision_types['right'] = True
+            elif movement[0] < 0:
+                self.rect.left = tile.right
+                collision_types['left'] = True
+        self.rect.y += movement[1]
+        hit_list = self.collision_test()
+        for tile in hit_list:
+            if movement[1] > 0:
+                self.rect.bottom = tile.top
+                collision_types['bottom'] = True
+            elif movement[1] < 0:
+                self.rect.top = tile.bottom
+                collision_types['top'] = True
+        return collision_types
 
 
 class AutoMovingBackground(Block):
@@ -78,33 +121,12 @@ class AutoMovingBackground(Block):
         if self.relative_x < settings.screen_width:
             settings.screen.blit(self.image, (self.relative_x, 0))
 
-class MovingBackground(Block):
-    def __init__(self, image_path, x_pos, y_pos):
-        super().__init__(image_path, x_pos, y_pos)
-        self.moving_speed = 0
-        self.moving_x = 0
-        self.relative_x = 0
-        self.initial_left = self.rect.left
-    
-    def update(self):
-        if settings.moving_bg >= 10:
-            self.moving_x -= self.moving_speed
-            self.relative_x = self.moving_x % self.rect.width
-        else:
-            self.moving_x = 0
-            self.relative_x = 0
-
-        settings.screen.blit(self.image, (self.relative_x - self.rect.width, 0))
-
-        if self.relative_x < settings.screen_width:
-            settings.screen.blit(self.image, (self.relative_x, 0))    
-
 class GameManager():
     def __init__(self, player_group):
         self.player_group = player_group
     
     def run_game(self):
-        self.player_group.draw(settings.screen)
+        self.player_group.draw(settings.display)
 
         self.player_group.update()
 
