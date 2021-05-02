@@ -3,6 +3,8 @@ import sys
 import random
 import settings
 import engine
+import csv
+import os
 
 tile0 = pygame.image.load('./assets/tiles/tile0.png').convert()
 tile1 = pygame.image.load('./assets/tiles/tile1.png').convert()
@@ -10,23 +12,17 @@ tile2 = pygame.image.load('./assets/tiles/tile2.png').convert()
 tile3 = pygame.image.load('./assets/tiles/tile3.png').convert()
 tile4 = pygame.image.load('./assets/tiles/tile4.png').convert()
 
-game_map = [['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','0','0','0','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1'],
-            ['0','0','0','0','0','0','0','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','0','0','0','0','0','0','0','0','0','0','0','0'],
-            ['1','1','1','1','1','1','1','0','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','-1','0','1','1','1','1','1','1','1','1','1','1','1','1'],
-            ['4','2','2','2','2','2','4','1','0','0','0','0','0','0','0','0','0','0','0','1','2','2','2','2','2','2','2','2','2','2','2','2'],
-            ['2','3','3','2','3','3','2','2','1','1','1','1','1','1','1','1','1','1','1','2','3','3','3','3','3','3','4','3','3','2','3','3'],
-            ['2','3','4','3','3','3','3','3','2','2','4','3','3','2','2','2','2','2','3','3','3','3','3','4','3','2','3','3','3','3','3','4'],
-            ['2','3','3','3','3','2','3','3','3','3','3','2','3','3','3','3','4','3','3','3','2','3','3','3','3','3','3','3','3','3','3','3'],
-            ['2','3','3','4','3','3','3','3','3','2','3','3','3','3','4','3','3','3','3','3','3','3','3','3','3','3','3','2','3','3','3','3']]
+true_scroll = [0, 0]
+
+def read_csv(filename):
+    map = []
+    with open(os.path.join(filename)) as data:
+        data = csv.reader(data, delimiter=',')
+        for row in data:
+            map.append(list(row))
+    return map
+
+game_map = read_csv('./maps/stage_one.csv')
 
 class GameState():
     def __init__(self):
@@ -124,16 +120,28 @@ class GameState():
             x = 0
             for tile in row:
                 if tile != '-1':
-                    tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
+                    tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
                 x += 1
             y += 1
 
-        player = engine.Player("assets/player", 1, 100, 0, 2, 1, 0.05, tile_rects)
+        player = engine.Player("assets/player/player", 1, 100, 50, 2, 3, 0.05, tile_rects)
         self.player_group.add(player)
+
 
         while self.is_running:
 
+            true_scroll[0] += (player.rect.x-true_scroll[0] - 402)/20
+            true_scroll[1] += (player.rect.y-true_scroll[1] - 400)/20
+
+            scroll = true_scroll.copy()
+            scroll[0] = int(scroll[0])
+            scroll[1] = int(scroll[1])
+
             settings.display.fill(settings.bg_color)
+
+            bg_image = pygame.image.load('assets/backgrounds/night-city.png').convert()
+            bg_scaled = pygame.transform.scale(bg_image, (960, 720))
+            settings.display.blit(bg_scaled, (0, 0))
 
             tile_rects= []
             y = 0
@@ -141,17 +149,23 @@ class GameState():
                 x = 0
                 for tile in row:
                     if tile == '0':
-                        settings.display.blit(tile0, (x * 16, y * 16))
+                        settings.display.blit(tile0, (x * 32 - scroll[0], y * 32 - scroll[1]))
                     if tile == '1':
-                        settings.display.blit(tile1, (x * 16, y * 16))
+                        settings.display.blit(tile1, (x * 32 - scroll[0], y * 32 - scroll[1]))
                     if tile == '2':
-                        settings.display.blit(tile2, (x * 16, y * 16))
+                        settings.display.blit(tile2, (x * 32 - scroll[0], y * 32 - scroll[1]))
                     if tile == '3':
-                        settings.display.blit(tile3, (x * 16, y * 16))
+                        settings.display.blit(tile3, (x * 32 - scroll[0], y * 32 - scroll[1]))
                     if tile == '4':
-                        settings.display.blit(tile4, (x * 16, y * 16))
+                        settings.display.blit(tile4, (x * 32 - scroll[0], y * 32 - scroll[1]))
+                    if tile != '-1':
+                        tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
                     x += 1
                 y += 1
+            
+            player.tiles = tile_rects
+            player.scroll_x = scroll[0]
+            player.scroll_y = scroll[1]
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

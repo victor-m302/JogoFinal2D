@@ -37,6 +37,8 @@ class Player(AnimatedBlock):
         self.momentum_y = 0
         self.air_timer = 0   
         self.tiles = tiles
+        self.scroll_x = 0
+        self.scroll_y = 0
     
     def screen_constrain(self):
         if self.rect.top <= 0:  
@@ -56,6 +58,11 @@ class Player(AnimatedBlock):
 
         self.image = self.sprites[int(self.current_sprite)]
 
+        self.draw_player()
+        
+        #self.screen_constrain()
+    
+    def draw_player(self):
         player_movement = [0, 0]
 
         player_movement[0] = self.movement_x
@@ -73,9 +80,9 @@ class Player(AnimatedBlock):
             self.air_timer = 0
         else:
             self.air_timer += 1
-        
-        self.screen_constrain()
-    
+
+        settings.display.blit(self.image,(self.rect.x-self.scroll_x,self.rect.y-self.scroll_y))
+
     def collision_test(self):
         hit_list = []
         for tile in self.tiles:
@@ -105,7 +112,6 @@ class Player(AnimatedBlock):
                 collision_types['top'] = True
         return collision_types
 
-
 class AutoMovingBackground(Block):
     def __init__(self, image_path, x_pos, y_pos, moving_speed):
         super().__init__(image_path, x_pos, y_pos)
@@ -126,8 +132,8 @@ class GameManager():
         self.player_group = player_group
     
     def run_game(self):
-        self.player_group.draw(settings.display)
-
+        print('')
+        #self.player_group.draw(settings.display)
         self.player_group.update()
 
     def reset_game(self):

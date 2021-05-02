@@ -11,11 +11,11 @@ clock = pygame.time.Clock()
 screen_width = 960  # largura
 screen_height = 720  # altura
 
-display = pygame.Surface((400, 272))
+screen = pygame.display.set_mode((screen_width, screen_height), 0, 32)
 
-# cria a janela do jogo
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Ships")  # titulo
+display = pygame.Surface((960, 720))
+
+pygame.display.set_caption("My Own Game")  # titulo
 
 bg_color = pygame.Color("#76d7ea")  # cor de fundo
 font_color = pygame.Color("#ffffff") # cor da fonte
