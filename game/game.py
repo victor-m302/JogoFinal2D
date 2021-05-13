@@ -32,10 +32,10 @@ class GameState():
         self.player_group = pygame.sprite.GroupSingle()
         self.game_manager = engine.GameManager(self.player_group)
 
-        farback = engine.AutoMovingBackground("assets/backgrounds/farback.png", 0, 0, 3)
-        stars = engine.AutoMovingBackground("assets/backgrounds/stars.png", 0, 0, 1)
+        farback = engine.AutoMovingBackground("assets/backgrounds/farback.png", 0, 0, 1)
+        #stars = engine.AutoMovingBackground("assets/backgrounds/stars.png", 0, 0, 1)
         self.background_group.add(farback)
-        self.background_group.add(stars)
+        #self.background_group.add(stars)
 
     def state_manager(self):
         if self.state == "menu":
@@ -47,21 +47,20 @@ class GameState():
     
     def menu(self):
         self.is_running = True
-        title = engine.Text("assets/title/title", 4,
-                            settings.screen_width/2, 100, 1, 0.07)
+        # title = engine.Element("assets/menu/title", 1, settings.screen_width/2, 50, 1, 0.07)
 
         text_group = pygame.sprite.Group()
-        text_group.add(title)
+        # text_group.add(title)
+        
 
         singleplayer_button = engine.Button(
             "assets/sg_btn/singleplayer", 13, settings.screen_width/2, 400, 0.6, 0.07)
         
-        multiplayer_button = engine.Button(
-            "assets/mp_btn/multiplayer", 12, settings.screen_width/2, 550, 0.6, 0.07)
+        #multiplayer_button = engine.Button("assets/mp_btn/multiplayer", 12, settings.screen_width/2, 550, 0.6, 0.07)
 
         button_group = pygame.sprite.Group()
         button_group.add(singleplayer_button)
-        button_group.add(multiplayer_button)
+        #button_group.add(multiplayer_button)
 
         mouse = engine.Mouse()
         mouse_group = pygame.sprite.Group()
@@ -89,13 +88,14 @@ class GameState():
                             print("singleplayer")
                             self.state = "singleplayer"
                             self.is_running = False
-                        elif collision_button.bottom <= 800:
-                            settings.button_sound.play()
-                            print("multiplayer")
-                            self.state = "menu"
-                            self.is_running = False
+                        # elif collision_button.bottom <= 800:
+                        #     settings.button_sound.play()
+                        #     print("multiplayer")
+                        #     self.state = "menu"
+                        #     self.is_running = False
                         
             
+            settings.screen.fill(settings.bg_color)
             self.background_group.draw(settings.screen)
             self.background_group.update()
 
@@ -114,19 +114,25 @@ class GameState():
         self.is_running = True
         settings.score = 0
 
+        level_map = read_csv('./maps/stage_one.csv')
+
+        tiles = []
         tile_rects = []
         y = 0
-        for row in game_map:
+        for row in level_map:
             x = 0
             for tile in row:
                 if tile != '-1':
+                    new_tile = engine.Tile('./assets/tiles/tile' + tile + '.png', x * 32, y * 32)
+                    tiles.append(new_tile)
                     tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
                 x += 1
             y += 1
 
-        player = engine.Player("assets/player/player", 1, 100, 50, 2, 3, 0.05, tile_rects)
-        self.player_group.add(player)
+        tile_map = engine.TileMap(tiles, tile_rects)
 
+        player = engine.Player("assets/player/player", 1, 100, 50, 1, 3, 0.05, tile_rects)
+        self.player_group.add(player)
 
         while self.is_running:
 
@@ -143,27 +149,6 @@ class GameState():
             bg_scaled = pygame.transform.scale(bg_image, (960, 720))
             settings.display.blit(bg_scaled, (0, 0))
 
-            tile_rects= []
-            y = 0
-            for row in game_map:
-                x = 0
-                for tile in row:
-                    if tile == '0':
-                        settings.display.blit(tile0, (x * 32 - scroll[0], y * 32 - scroll[1]))
-                    if tile == '1':
-                        settings.display.blit(tile1, (x * 32 - scroll[0], y * 32 - scroll[1]))
-                    if tile == '2':
-                        settings.display.blit(tile2, (x * 32 - scroll[0], y * 32 - scroll[1]))
-                    if tile == '3':
-                        settings.display.blit(tile3, (x * 32 - scroll[0], y * 32 - scroll[1]))
-                    if tile == '4':
-                        settings.display.blit(tile4, (x * 32 - scroll[0], y * 32 - scroll[1]))
-                    if tile != '-1':
-                        tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
-                    x += 1
-                y += 1
-            
-            player.tiles = tile_rects
             player.scroll_x = scroll[0]
             player.scroll_y = scroll[1]
 
@@ -196,6 +181,7 @@ class GameState():
             
             settings.screen.fill(settings.bg_color)
             self.game_manager.run_game()
+            tile_map.draw_map(scroll[0], scroll[1])
             surf = pygame.transform.scale(settings.display, (settings.screen_width, settings.screen_height))
             settings.screen.blit(surf, (0, 0))
 

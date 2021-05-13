@@ -1,7 +1,17 @@
 import pygame
 import sys
 import random
+import csv
+import os
 import settings
+
+def read_csv(filename):
+    map = []
+    with open(os.path.join(filename)) as data:
+        data = csv.reader(data, delimiter=',')
+        for row in data:
+            map.append(list(row))
+    return map
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, image_path, x_pos, y_pos):
@@ -111,6 +121,34 @@ class Player(AnimatedBlock):
                 self.rect.top = tile.bottom
                 collision_types['top'] = True
         return collision_types
+    # def move(self, movement):
+    #     collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
+    #     self.rect.x += movement[0]
+
+    #     if pygame.sprite.spritecollide(self, self.tiles, False):
+    #         collided_tiles = pygame.sprite.spritecollide(
+    #         self, self.tiles, False)
+    #         for tile in collided_tiles:    
+    #             if movement[0] > 0:
+    #                 self.rect.right = tile.rect.left
+    #                 collision_types['right'] = True
+    #             elif movement[0] < 0:
+    #                 self.rect.left = tile.rect.right
+    #                 collision_types['left'] = True
+
+    #     self.rect.y += movement[1]
+    #     if pygame.sprite.spritecollide(self, self.tiles, False):
+    #         collided_tiles = pygame.sprite.spritecollide(
+    #         self, self.tiles, False)
+    #         for tile in collided_tiles:    
+    #             if movement[1] > 0:
+    #                 self.rect.bottom = tile.rect.top
+    #                 collision_types['bottom'] = True
+    #             elif movement[1] < 0:
+    #                 self.rect.top = tile.rect.bottom
+    #                 collision_types['top'] = True
+
+    #     return collision_types
 
 class AutoMovingBackground(Block):
     def __init__(self, image_path, x_pos, y_pos, moving_speed):
@@ -122,6 +160,7 @@ class AutoMovingBackground(Block):
     def update(self):
         self.moving_x -= self.moving_speed
         self.relative_x = self.moving_x % self.rect.width
+
         settings.screen.blit(self.image, (self.relative_x - self.rect.width, 0))
 
         if self.relative_x < settings.screen_width:
@@ -132,8 +171,6 @@ class GameManager():
         self.player_group = player_group
     
     def run_game(self):
-        print('')
-        #self.player_group.draw(settings.display)
         self.player_group.update()
 
     def reset_game(self):
@@ -162,7 +199,7 @@ class Button(AnimatedBlock):
 
         self.image = self.sprites[int(self.current_sprite)]
 
-class Text(AnimatedBlock):
+class Element(AnimatedBlock):
     def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize, sprite_speed):
         super().__init__(base_images_path, number_of_images, x_pos, y_pos, resize)
         self.sprite_speed = sprite_speed
@@ -174,3 +211,24 @@ class Text(AnimatedBlock):
             self.current_sprite = 0
 
         self.image = self.sprites[int(self.current_sprite)]
+
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, image_path, initial_x_pos, initial_y_pos):
+        super().__init__()
+        self.image = pygame.image.load(image_path).convert_alpha() 
+        self.rect = self.image.get_rect(center=(initial_x_pos, initial_y_pos))
+        self.initial_x_pos = initial_x_pos
+        self.initial_y_pos = initial_y_pos
+    
+    def draw_tile(self, scroll_x, scroll_y):
+        settings.display.blit(self.image, (self.initial_x_pos - scroll_x, self.initial_y_pos - scroll_y))
+
+class TileMap():
+    def __init__(self, tiles, tile_rects):
+        super().__init__()
+        self.tiles = tiles
+    
+    def draw_map(self, scroll_x, scroll_y):
+        for tile in self.tiles:
+            tile.draw_tile(scroll_x, scroll_y)
+
