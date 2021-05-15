@@ -65,6 +65,8 @@ class GameState():
         mouse_group = pygame.sprite.Group()
         mouse_group.add(mouse)
 
+        settings.zombie_theme.play()
+
         while self.is_running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
