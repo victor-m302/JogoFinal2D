@@ -18,6 +18,7 @@ class Block(pygame.sprite.Sprite):
         super().__init__()
         self.image = pygame.image.load(image_path).convert_alpha()  # carrega o sprite
         self.rect = self.image.get_rect(center=(x_pos, y_pos)) # desenha o retangulo em volta da imagem
+        settings.zombie_theme.play()
 
 class AnimatedBlock(pygame.sprite.Sprite): # classe base
     def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize):

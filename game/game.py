@@ -31,11 +31,10 @@ class GameState():
         self.background_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.GroupSingle()
         self.game_manager = engine.GameManager(self.player_group)
-
         farback = engine.AutoMovingBackground("assets/backgrounds/farback.png", 0, 0, 1)
-        #stars = engine.AutoMovingBackground("assets/backgrounds/stars.png", 0, 0, 1)
+        logo = engine.AutoMovingBackground("assets/backgrounds/logo.png", 0, 0, 0)
         self.background_group.add(farback)
-        #self.background_group.add(stars)
+        self.background_group.add(logo)
 
     def state_manager(self):
         if self.state == "menu":
@@ -113,7 +112,7 @@ class GameState():
     def singleplayer(self):
         self.is_running = True
         settings.score = 0
-
+        settings.zombie_theme.fadeout(10)
         level_map = read_csv('./maps/stage_one.csv')
 
         tiles = []
@@ -135,7 +134,6 @@ class GameState():
         self.player_group.add(player)
 
         while self.is_running:
-
             true_scroll[0] += (player.rect.x-true_scroll[0] - 402)/20
             true_scroll[1] += (player.rect.y-true_scroll[1] - 400)/20
 
