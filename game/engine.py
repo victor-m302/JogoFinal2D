@@ -36,29 +36,51 @@ class AnimatedBlock(pygame.sprite.Sprite): # classe base
         self.rect = self.image.get_rect()
         self.rect.center = [x_pos, y_pos]
 
-class Player(AnimatedBlock):
-    def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles):
+class CharacterBlock(pygame.sprite.Sprite): # classe base
+    def __init__(self, base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize):
+        super().__init__()
+        self.sprites_left = []
+        self.sprites_right = []
+
+        for i in range(number_of_images):
+            image_path = base_images_path_left + str(i + 1) + ".png"
+            image = pygame.image.load(image_path).convert_alpha()
+            resized_image = pygame.transform.scale(image, (int(image.get_rect().width * resize), int(image.get_rect().height * resize)))
+            self.sprites_left.append(resized_image)
+        
+        for i in range(number_of_images):
+            image_path = base_images_path_right + str(i + 1) + ".png"
+            image = pygame.image.load(image_path).convert_alpha()
+            resized_image = pygame.transform.scale(image, (int(image.get_rect().width * resize), int(image.get_rect().height * resize)))
+            self.sprites_right.append(resized_image)
+
+        self.current_sprite = 0
+        self.image = self.sprites_right[self.current_sprite]
+
+        self.rect = self.image.get_rect()
+        self.rect.center = [x_pos, y_pos]
+
+class Enemy(AnimatedBlock):
+    def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize, sprite_speed, tiles, player):
         super().__init__(base_images_path, number_of_images, x_pos, y_pos, resize)
-        self.speed = speed
+        self.CHASING_PLAYER = False
+        self.speed = random.uniform(1, 3)
         self.sprite_speed = sprite_speed 
         self.movement_y = 0 
-        self.movement_x = 0 
+        self.movement_x = self.speed
+        self.tiles = tiles
+        self.player = player
         self.life = 3
         self.momentum_y = 0
         self.air_timer = 0   
-        self.tiles = tiles
         self.scroll_x = 0
         self.scroll_y = 0
+        self.initial_x_position = x_pos
+        self.initial_y_position = y_pos
     
     def screen_constrain(self):
-        if self.rect.top <= 0:  
-            self.rect.top = 0
         if self.rect.bottom >= settings.screen_height:
-            self.rect.bottom = settings.screen_height 
-        if self.rect.left <= 0:
-            self.rect.left = 0
-        if self.rect.right >= settings.screen_width:
-            self.rect.right = settings.screen_width
+            self.kill() 
 
     def update(self):
         self.current_sprite += self.sprite_speed
@@ -68,22 +90,41 @@ class Player(AnimatedBlock):
 
         self.image = self.sprites[int(self.current_sprite)]
 
-        self.draw_player()
+        self.draw_enemy()
         
-        #self.screen_constrain()
+        self.screen_constrain()
     
-    def draw_player(self):
-        player_movement = [0, 0]
+    def enemy_ai(self):
+        if not self.CHASING_PLAYER and abs(self.player.sprite.rect.x - self.rect.x) <= 100:
+            self.CHASING_PLAYER = True
 
-        player_movement[0] = self.movement_x
-        player_movement[1] = self.movement_y
+        if self.CHASING_PLAYER:
+            if self.player.sprite.rect.x >= self.rect.x:
+                self.movement_x = self.speed * 1.25
+            else:
+                self.movement_x = -self.speed 
+        elif abs(self.initial_x_position - self.rect.x) >= 200:
+            if abs(self.movement_x) > 0:
+                self.movement_x *= -1
+            else:
+                self.movement_x = self.speed
+        else:
+            self.movement_x = 0   
+    
+    def draw_enemy(self):
+        enemy_movement = [0, 0]
 
-        player_movement[1] += self.momentum_y
+        self.enemy_ai()
+
+        enemy_movement[0] = self.movement_x
+        enemy_movement[1] = self.movement_y
+
+        enemy_movement[1] += self.momentum_y
         self.momentum_y += 0.2
         if self.momentum_y > 3:
             self.momentum_y = 3
 
-        collisions = self.move(player_movement)
+        collisions = self.move(enemy_movement)
 
         if collisions['bottom']:
             self.momentum_y = 0
@@ -121,34 +162,138 @@ class Player(AnimatedBlock):
                 self.rect.top = tile.bottom
                 collision_types['top'] = True
         return collision_types
-    # def move(self, movement):
-    #     collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
-    #     self.rect.x += movement[0]
 
-    #     if pygame.sprite.spritecollide(self, self.tiles, False):
-    #         collided_tiles = pygame.sprite.spritecollide(
-    #         self, self.tiles, False)
-    #         for tile in collided_tiles:    
-    #             if movement[0] > 0:
-    #                 self.rect.right = tile.rect.left
-    #                 collision_types['right'] = True
-    #             elif movement[0] < 0:
-    #                 self.rect.left = tile.rect.right
-    #                 collision_types['left'] = True
+class Player(CharacterBlock):
+    def __init__(self, base_images_path_left, base_images_path_right,number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles, enemy_group):
+        super().__init__(base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize)
+        self.LEFT_KEY = False
+        self.RIGHT_KEY = False
+        self.FACING_LEFT = False
+        self.FACING_RIGHT = True
+        self.speed = speed
+        self.sprite_speed = sprite_speed 
+        self.enemy_group = enemy_group
+        self.movement_y = 0 
+        self.movement_x = 0 
+        self.life = 3
+        self.momentum_y = 0
+        self.air_timer = 0   
+        self.tiles = tiles
+        self.scroll_x = 0
+        self.scroll_y = 0
+        self.friction_right, self.friction_left = -.045, -.1
+        self.acceleration = 0
+    
+    def screen_constrain(self):
+        if self.rect.bottom >= settings.screen_height:
+            self.rect.bottom = 0 
 
-    #     self.rect.y += movement[1]
-    #     if pygame.sprite.spritecollide(self, self.tiles, False):
-    #         collided_tiles = pygame.sprite.spritecollide(
-    #         self, self.tiles, False)
-    #         for tile in collided_tiles:    
-    #             if movement[1] > 0:
-    #                 self.rect.bottom = tile.rect.top
-    #                 collision_types['bottom'] = True
-    #             elif movement[1] < 0:
-    #                 self.rect.top = tile.rect.bottom
-    #                 collision_types['top'] = True
+    def update(self):
+        if self.movement_x > 0.8 or self.movement_x < -0.1:
+            self.current_sprite += self.sprite_speed
 
-    #     return collision_types
+            if self.current_sprite >= len(self.sprites_left):
+                self.current_sprite = 0
+
+            if self.FACING_RIGHT:
+                self.image = self.sprites_right[int(self.current_sprite)]
+            elif self.FACING_LEFT:
+                self.image = self.sprites_left[int(self.current_sprite)]
+        else:
+            self.current_sprite = 0
+            if self.FACING_RIGHT:
+                self.image = self.sprites_right[0]
+            elif self.FACING_LEFT:
+                self.image = self.sprites_left[0]
+
+        self.draw_player()  
+        self.screen_constrain()
+        self.collision()
+
+    def collision(self):
+        if pygame.sprite.spritecollide(self, self.enemy_group, False):
+            collided_enemies = pygame.sprite.spritecollide(
+                self, self.enemy_group, False)
+
+            pygame.mixer.Sound.play(settings.destroy_sound)
+
+            for collided_enemy in collided_enemies:
+                collided_enemy.kill()
+                self.life -= 1
+
+    def draw_player(self):
+        self.horizontal_movement()
+        player_movement = [0, 0]
+        
+        player_movement[0] = self.movement_x
+        player_movement[1] = self.movement_y
+
+        player_movement[1] += self.momentum_y
+        self.momentum_y += 0.2
+        if self.momentum_y > 3:
+            self.momentum_y = 3
+
+        collisions = self.move(player_movement)
+
+        if collisions['bottom']:
+            self.momentum_y = 0
+            self.air_timer = 0
+        else:
+            self.air_timer += 1
+
+        settings.display.blit(self.image,(self.rect.x-self.scroll_x,self.rect.y-self.scroll_y))
+
+    def horizontal_movement(self): 
+        self.acceleration = 0
+        if self.LEFT_KEY:
+            self.acceleration -= .4
+        elif self.RIGHT_KEY:
+            self.acceleration += .25
+        
+        if self.FACING_LEFT:
+            self.acceleration += self.movement_x * self.friction_left
+        elif self.FACING_RIGHT:
+            self.acceleration += self.movement_x * self.friction_right
+        self.movement_x += self.acceleration
+        self.limit_velocity(4)
+
+    def limit_velocity(self, max_velocity):
+        min(-max_velocity, max(self.movement_x, max_velocity))
+        # if abs(self.movement_x) > max_velocity:
+        #     if self.movement_x > 0:
+        #         self.movement_x = max_velocity
+        #     else:
+        #         self.movement_x = -max_velocity
+        if abs(self.movement_x) < .01: self.movement_x = 0
+
+    def collision_test(self):
+        hit_list = []
+        for tile in self.tiles:
+            if self.rect.colliderect(tile):
+                hit_list.append(tile)
+        return hit_list
+
+    def move(self, movement):
+        collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
+        self.rect.x += movement[0]
+        hit_list = self.collision_test()
+        for tile in hit_list:
+            if movement[0] > 0:
+                self.rect.right = tile.left
+                collision_types['right'] = True
+            elif movement[0] < 0:
+                self.rect.left = tile.right
+                collision_types['left'] = True
+        self.rect.y += movement[1]
+        hit_list = self.collision_test()
+        for tile in hit_list:
+            if movement[1] > 0:
+                self.rect.bottom = tile.top
+                collision_types['bottom'] = True
+            elif movement[1] < 0:
+                self.rect.top = tile.bottom
+                collision_types['top'] = True
+        return collision_types
 
 class AutoMovingBackground(Block):
     def __init__(self, image_path, x_pos, y_pos, moving_speed):
@@ -167,11 +312,13 @@ class AutoMovingBackground(Block):
             settings.screen.blit(self.image, (self.relative_x, 0))
 
 class GameManager():
-    def __init__(self, player_group):
+    def __init__(self, player_group, enemy_group):
         self.player_group = player_group
+        self.enemy_group = enemy_group
     
     def run_game(self):
         self.player_group.update()
+        self.enemy_group.update()
 
     def reset_game(self):
         print("")

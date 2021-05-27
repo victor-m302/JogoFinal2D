@@ -30,7 +30,8 @@ class GameState():
         self.is_running = True
         self.background_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.GroupSingle()
-        self.game_manager = engine.GameManager(self.player_group)
+        self.enemy_group = pygame.sprite.Group()
+        self.game_manager = engine.GameManager(self.player_group, self.enemy_group)
         farback = engine.AutoMovingBackground("assets/backgrounds/farback.png", 0, 0, 1)
         logo = engine.AutoMovingBackground("assets/backgrounds/logo.png", 0, 0, 0)
         self.background_group.add(farback)
@@ -117,23 +118,27 @@ class GameState():
         settings.zombie_theme.fadeout(10)
         level_map = read_csv('./maps/stage_one.csv')
 
+        player = {}
         tiles = []
         tile_rects = []
         y = 0
         for row in level_map:
             x = 0
             for tile in row:
-                if tile != '-1':
+                if tile == '9':
+                    player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 3, 0.3, tile_rects, self.enemy_group)
+                    self.player_group.add(player)    
+                elif tile == '8':
+                    enemy = engine.Enemy("assets/enemy/enemy", 1, x * 32, y * 32, 2, 0.05, tile_rects, self.player_group)
+                    self.enemy_group.add(enemy)
+                elif tile != '-1':
                     new_tile = engine.Tile('./assets/tiles/tile' + tile + '.png', x * 32, y * 32)
                     tiles.append(new_tile)
                     tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
                 x += 1
             y += 1
 
-        tile_map = engine.TileMap(tiles, tile_rects)
-
-        player = engine.Player("assets/player/player", 1, 100, 50, 1, 3, 0.05, tile_rects)
-        self.player_group.add(player)
+        tile_map = engine.TileMap(tiles, tile_rects)    
 
         while self.is_running:
             true_scroll[0] += (player.rect.x-true_scroll[0] - 402)/20
@@ -152,6 +157,10 @@ class GameState():
             player.scroll_x = scroll[0]
             player.scroll_y = scroll[1]
 
+            for enemy in self.enemy_group:
+                enemy.scroll_x = scroll[0]
+                enemy.scroll_y = scroll[1]
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -165,9 +174,13 @@ class GameState():
                         self.is_running = False
 
                     if event.key == pygame.K_LEFT:
-                        player.movement_x -= player.speed
+                        player.LEFT_KEY = True
+                        player.FACING_LEFT = True
+                        player.FACING_RIGHT = False
                     if event.key == pygame.K_RIGHT:
-                        player.movement_x += player.speed
+                        player.RIGHT_KEY = True
+                        player.FACING_RIGHT = True
+                        player.FACING_LEFT = False
                     if event.key == pygame.K_UP:
                         if player.air_timer < 6:
                             player.momentum_y = -5
@@ -175,9 +188,9 @@ class GameState():
                 # se soltou alguma tecla
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_LEFT:
-                        player.movement_x += player.speed
+                        player.LEFT_KEY = False
                     if event.key == pygame.K_RIGHT:
-                        player.movement_x -= player.speed
+                        player.RIGHT_KEY = False
             
             settings.screen.fill(settings.bg_color)
             self.game_manager.run_game()
