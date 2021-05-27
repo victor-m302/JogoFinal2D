@@ -125,11 +125,17 @@ class GameState():
         for row in level_map:
             x = 0
             for tile in row:
-                if tile == '9':
-                    player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 3, 0.3, tile_rects, self.enemy_group)
+                if tile == '9': #player corre
+                    player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 1, 0.15, tile_rects, self.enemy_group)
                     self.player_group.add(player)    
-                elif tile == '8':
-                    enemy = engine.Enemy("assets/enemy/enemy", 1, x * 32, y * 32, 2, 0.05, tile_rects, self.player_group)
+                elif tile == '8': #zumbi classe 3
+                    enemy = engine.Enemy("assets/enemy/classe3/a", 3, x * 16, y * 16, 1.2, 0.05, tile_rects, self.player_group)
+                    self.enemy_group.add(enemy)
+                elif tile == '7': #zumbi classe 2
+                    enemy = engine.Enemy("assets/enemy/classe2/a", 3, x * 32, y * 32, 1.2, 0.05, tile_rects, self.player_group)
+                    self.enemy_group.add(enemy)
+                elif tile == '6': #zumbi classe 1
+                    enemy = engine.Enemy("assets/enemy/classe1/a", 3, x * 32, y * 32, 1.5, 0.05, tile_rects, self.player_group)
                     self.enemy_group.add(enemy)
                 elif tile != '-1':
                     new_tile = engine.Tile('./assets/tiles/tile' + tile + '.png', x * 32, y * 32)
