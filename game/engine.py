@@ -171,6 +171,7 @@ class Player(CharacterBlock):
         self.FACING_LEFT = False
         self.FACING_RIGHT = True
         self.RESTING = True
+        self.SHOOTING = False
         self.speed = speed
         self.sprite_speed = sprite_speed 
         self.enemy_group = enemy_group
@@ -188,12 +189,11 @@ class Player(CharacterBlock):
     
 
     def set_Default_img(self,base_image_path,resize):
-            image_path = base_image_path #path da imagem + numero + .png
+            image_path = base_image_path #path da imagem com nome do arquivo e tipo
             image = pygame.image.load(image_path).convert_alpha()
             resized_image = pygame.transform.scale(image, (int(image.get_rect().width * resize), int(image.get_rect().height * resize)))
             return resized_image
             #image = pygame.image.load('/feira/banana.png').convert_alpha()
-            #self.sprites_left.append(resized_image)
 
 
     def screen_constrain(self):
@@ -215,9 +215,14 @@ class Player(CharacterBlock):
 
             self.current_sprite = 0
             if self.FACING_RIGHT:
-                self.image = self.set_Default_img('./assets/player/player1.png',1)
+                self.image = self.set_Default_img('./assets/player/player1_R.png',1)
             elif self.FACING_LEFT:
-                self.image = self.set_Default_img('./assets/player/player1.png',1)
+                self.image = self.set_Default_img('./assets/player/player1_L.png',1)
+
+            if self.FACING_RIGHT and self.SHOOTING:
+                self.image = self.set_Default_img('./assets/player/player_shootR.png',1)
+            elif self.FACING_LEFT and self.SHOOTING:
+                self.image = self.set_Default_img('./assets/player/player_shootL.png',1)
             
 
 

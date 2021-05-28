@@ -191,6 +191,11 @@ class GameState():
                     if event.key == pygame.K_UP:
                         if player.air_timer < 6:
                             player.momentum_y = -5
+                    if event.key == pygame.K_SPACE:
+                        player.SHOOTING = True
+                        print('atira')
+                        #if player.air_timer < 6:
+                        #    player.momentum_y = -5
 
                 # se soltou alguma tecla
                 if event.type == pygame.KEYUP:
@@ -198,7 +203,10 @@ class GameState():
                         player.LEFT_KEY = False
                     if event.key == pygame.K_RIGHT:
                         player.RIGHT_KEY = False
-            
+                    if event.key == pygame.K_SPACE:
+                        player.SHOOTING = False
+                        print('para de atirar')
+
             settings.screen.fill(settings.bg_color)
             self.game_manager.run_game()
             tile_map.draw_map(scroll[0], scroll[1])
