@@ -164,12 +164,13 @@ class Enemy(AnimatedBlock):
         return collision_types
 
 class Player(CharacterBlock):
-    def __init__(self, base_images_path_left, base_images_path_right,number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles, enemy_group):
+    def __init__(self, base_images_path_left, base_images_path_right,number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles, enemy_group, default_image):
         super().__init__(base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize)
         self.LEFT_KEY = False
         self.RIGHT_KEY = False
         self.FACING_LEFT = False
         self.FACING_RIGHT = True
+        self.RESTING = True
         self.speed = speed
         self.sprite_speed = sprite_speed 
         self.enemy_group = enemy_group
@@ -183,13 +184,24 @@ class Player(CharacterBlock):
         self.scroll_y = 0
         self.friction_right, self.friction_left = -.045, -.1
         self.acceleration = 0
+        self.default_image = 0
     
+
+    def set_Default_img(self,base_image_path,resize):
+            image_path = base_image_path #path da imagem + numero + .png
+            image = pygame.image.load(image_path).convert_alpha()
+            resized_image = pygame.transform.scale(image, (int(image.get_rect().width * resize), int(image.get_rect().height * resize)))
+            return resized_image
+            #image = pygame.image.load('/feira/banana.png').convert_alpha()
+            #self.sprites_left.append(resized_image)
+
+
     def screen_constrain(self):
         if self.rect.bottom >= settings.screen_height:
             self.rect.bottom = 0 
 
     def update(self):
-        if self.movement_x > 0.8 or self.movement_x < -0.1:
+        if self.movement_x > 0.8 or self.movement_x < -0.1: # se movendo pra frente ou tras 
             self.current_sprite += self.sprite_speed
 
             if self.current_sprite >= len(self.sprites_left):
@@ -199,17 +211,29 @@ class Player(CharacterBlock):
                 self.image = self.sprites_right[int(self.current_sprite)]
             elif self.FACING_LEFT:
                 self.image = self.sprites_left[int(self.current_sprite)]
-        else:
+        else: #parado
+
             self.current_sprite = 0
             if self.FACING_RIGHT:
-                self.image = self.sprites_right[0]
+                self.image = self.set_Default_img('./assets/player/player1.png',1)
             elif self.FACING_LEFT:
-                self.image = self.sprites_left[0]
+                self.image = self.set_Default_img('./assets/player/player1.png',1)
+            
+
 
         self.draw_player()  
         self.screen_constrain()
         self.collision()
 
+
+        '''
+        else: #parado
+            self.current_sprite = 0
+            if self.FACING_RIGHT:
+                self.image = self.sprites_right[0]
+            elif self.FACING_LEFT:
+                self.image = self.sprites_left[0]
+        '''
     def collision(self):
         if pygame.sprite.spritecollide(self, self.enemy_group, False):
             collided_enemies = pygame.sprite.spritecollide(
@@ -220,7 +244,7 @@ class Player(CharacterBlock):
             for collided_enemy in collided_enemies:
                 collided_enemy.kill()
                 self.life -= 1
-
+    
     def draw_player(self):
         self.horizontal_movement()
         player_movement = [0, 0]

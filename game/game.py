@@ -122,11 +122,12 @@ class GameState():
         tiles = []
         tile_rects = []
         y = 0
+        default_image = 0
         for row in level_map:
             x = 0
             for tile in row:
                 if tile == '9': #player corre
-                    player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 1, 0.15, tile_rects, self.enemy_group)
+                    player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 1, 0.15, tile_rects, self.enemy_group,default_image)
                     self.player_group.add(player)    
                 elif tile == '8': #zumbi classe 3
                     enemy = engine.Enemy("assets/enemy/classe3/a", 3, x * 16, y * 16, 1.2, 0.05, tile_rects, self.player_group)
