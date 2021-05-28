@@ -6,12 +6,6 @@ import engine
 import csv
 import os
 
-tile0 = pygame.image.load('./assets/tiles/tile0.png').convert()
-tile1 = pygame.image.load('./assets/tiles/tile1.png').convert()
-tile2 = pygame.image.load('./assets/tiles/tile2.png').convert()
-tile3 = pygame.image.load('./assets/tiles/tile3.png').convert()
-tile4 = pygame.image.load('./assets/tiles/tile4.png').convert()
-
 true_scroll = [0, 0]
 
 def read_csv(filename):
@@ -31,19 +25,105 @@ class GameState():
         self.background_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.GroupSingle()
         self.enemy_group = pygame.sprite.Group()
-        self.game_manager = engine.GameManager(self.player_group, self.enemy_group)
+        self.bullet_group = pygame.sprite.Group()
+        self.game_manager = engine.GameManager(self.player_group, self.enemy_group, self.bullet_group)
         farback = engine.AutoMovingBackground("assets/backgrounds/farback.png", 0, 0, 1)
         logo = engine.AutoMovingBackground("assets/backgrounds/logo.png", 0, 0, 0)
         self.background_group.add(farback)
         self.background_group.add(logo)
+        self.player = {}
+        self.tile_rects = []
 
     def state_manager(self):
         if self.state == "menu":
             self.menu()
-        elif self.state == "lost_level":
+        elif self.state == "lose_screen":
             self.lost_level()
-        elif self.state == "singleplayer":
-            self.singleplayer()
+        elif self.state == "level1":
+            self.level1()
+
+    def game_events(self):
+        for event in pygame.event.get():
+                if self.player.life <= 0:
+                    self.state = "lose_screen"
+                    self.game_manager.reset_game()
+                    self.is_running = False
+                    
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                
+                # se apertou alguma tecla
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.state = "lose_screen"
+                        self.game_manager.reset_game()
+                        self.is_running = False
+
+                    if event.key == pygame.K_LEFT:
+                        self.player.LEFT_KEY = True
+                        self.player.FACING_LEFT = True
+                        self.player.FACING_RIGHT = False
+                    if event.key == pygame.K_RIGHT:
+                        self.player.RIGHT_KEY = True
+                        self.player.FACING_RIGHT = True
+                        self.player.FACING_LEFT = False
+                    if event.key == pygame.K_UP:
+                        if self.player.air_timer < 6:
+                            self.player.momentum_y = -5
+                    if event.key == pygame.K_SPACE:
+                        if(len(self.bullet_group.sprites()) < 5):
+                            self.player.SHOOTING = True
+                            if self.player.FACING_RIGHT:
+                                pygame.mixer.Sound.play(settings.laser_sound)
+                                new_bullet = engine.Bullet(
+                                    "assets/bulletR.png", self.player.rect.centerx + 20, self.player.rect.centery - 8, 8, self.enemy_group, self.player_group)
+                                self.bullet_group.add(new_bullet)
+                            elif self.player.FACING_LEFT:
+                                pygame.mixer.Sound.play(settings.laser_sound)
+                                new_bullet = engine.Bullet(
+                                    "assets/bulletL.png", self.player.rect.centerx - 20, self.player.rect.centery - 8, -8, self.enemy_group, self.player_group)
+                                self.bullet_group.add(new_bullet)
+                # se soltou alguma tecla
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LEFT:
+                        self.player.LEFT_KEY = False
+                    if event.key == pygame.K_RIGHT:
+                        self.player.RIGHT_KEY = False
+                    if event.key == pygame.K_SPACE:
+                        self.player.SHOOTING = False
+    
+    def lost_level(self):
+        self.is_running = True
+
+        lost_level_text = settings.basic_font.render(
+            "Your total score is " + str(settings.score), True, settings.font_color)
+        lost_level_text_rect = lost_level_text.get_rect(
+            center=(settings.screen_width/2, settings.screen_height/2 - 50))
+
+        press_space_text = settings.basic_font.render(
+            "Press space to return to the menu", True, settings.font_color)
+        press_space_text_rect = press_space_text.get_rect(
+            center=(settings.screen_width/2, settings.screen_height/2 + 50))
+
+        while self.is_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        settings.score = 0
+                        self.state = "menu"
+                        self.is_running = False
+
+            settings.screen.fill((0, 0, 0))
+
+            settings.screen.blit(lost_level_text, lost_level_text_rect)
+            settings.screen.blit(press_space_text, press_space_text_rect)
+            pygame.display.update()
+            settings.clock.tick(120)
     
     def menu(self):
         self.is_running = True
@@ -87,8 +167,7 @@ class GameState():
                         print(collision_button.bottom)
                         if collision_button.bottom <= 500:
                             settings.button_sound.play()
-                            print("singleplayer")
-                            self.state = "singleplayer"
+                            self.state = "level1"
                             self.is_running = False
                         # elif collision_button.bottom <= 800:
                         #     settings.button_sound.play()
@@ -112,44 +191,39 @@ class GameState():
             pygame.display.update()
             settings.clock.tick(120)
 
-    def singleplayer(self):
+    def level1(self):
         self.is_running = True
         settings.score = 0
         settings.zombie_theme.fadeout(10)
         level_map = read_csv('./maps/stage_one.csv')
 
-        player = {}
+        self.player = {}
         tiles = []
-        tile_rects = []
+        self.tile_rects = []
+        
         y = 0
-        default_image = 0
         for row in level_map:
             x = 0
             for tile in row:
-                if tile == '9': #player corre
-                    player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 1, 0.15, tile_rects, self.enemy_group,default_image)
-                    self.player_group.add(player)    
-                elif tile == '8': #zumbi classe 3
-                    enemy = engine.Enemy("assets/enemy/classe3/a", 3, x * 16, y * 16, 1.2, 0.05, tile_rects, self.player_group)
-                    self.enemy_group.add(enemy)
-                elif tile == '7': #zumbi classe 2
-                    enemy = engine.Enemy("assets/enemy/classe2/a", 3, x * 32, y * 32, 1.2, 0.05, tile_rects, self.player_group)
-                    self.enemy_group.add(enemy)
-                elif tile == '6': #zumbi classe 1
-                    enemy = engine.Enemy("assets/enemy/classe1/a", 3, x * 32, y * 32, 1.5, 0.05, tile_rects, self.player_group)
+                if tile == '9':
+                    self.player = engine.Player("assets/player/left/l", "assets/player/right/r", 7, x * 32, y * 32, 1, 3, 0.3, self.tile_rects, self.enemy_group)
+                    self.player_group.add(self.player)    
+                elif tile == '8':
+                    enemy = engine.Enemy("assets/enemy/class3/l", "assets/enemy/class3/r", 3, x * 32, y * 32, 1, 0.07, self.tile_rects, self.player_group)
                     self.enemy_group.add(enemy)
                 elif tile != '-1':
                     new_tile = engine.Tile('./assets/tiles/tile' + tile + '.png', x * 32, y * 32)
                     tiles.append(new_tile)
-                    tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
+                    self.tile_rects.append(pygame.Rect(x * 32, y * 32, 32, 32))
                 x += 1
             y += 1
 
-        tile_map = engine.TileMap(tiles, tile_rects)    
+        tile_map = engine.TileMap(tiles, self.tile_rects)    
 
         while self.is_running:
-            true_scroll[0] += (player.rect.x-true_scroll[0] - 402)/20
-            true_scroll[1] += (player.rect.y-true_scroll[1] - 400)/20
+
+            true_scroll[0] += (self.player.rect.x-true_scroll[0] - 202)/20
+            true_scroll[1] += (self.player.rect.y-true_scroll[1] - 200)/20
 
             scroll = true_scroll.copy()
             scroll[0] = int(scroll[0])
@@ -161,52 +235,19 @@ class GameState():
             bg_scaled = pygame.transform.scale(bg_image, (960, 720))
             settings.display.blit(bg_scaled, (0, 0))
 
-            player.scroll_x = scroll[0]
-            player.scroll_y = scroll[1]
+            self.player.scroll_x = scroll[0]
+            self.player.scroll_y = scroll[1]
 
             for enemy in self.enemy_group:
                 enemy.scroll_x = scroll[0]
                 enemy.scroll_y = scroll[1]
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                
-                # se apertou alguma tecla
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        self.state = "menu"
-                        # self.game_manager.reset_game()
-                        self.is_running = False
-
-                    if event.key == pygame.K_LEFT:
-                        player.LEFT_KEY = True
-                        player.FACING_LEFT = True
-                        player.FACING_RIGHT = False
-                    if event.key == pygame.K_RIGHT:
-                        player.RIGHT_KEY = True
-                        player.FACING_RIGHT = True
-                        player.FACING_LEFT = False
-                    if event.key == pygame.K_UP:
-                        if player.air_timer < 6:
-                            player.momentum_y = -5
-                    if event.key == pygame.K_SPACE:
-                        player.SHOOTING = True
-                        print('atira')
-                        #if player.air_timer < 6:
-                        #    player.momentum_y = -5
-
-                # se soltou alguma tecla
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_LEFT:
-                        player.LEFT_KEY = False
-                    if event.key == pygame.K_RIGHT:
-                        player.RIGHT_KEY = False
-                    if event.key == pygame.K_SPACE:
-                        player.SHOOTING = False
-                        print('para de atirar')
-
+            self.game_events()
+            
+            for bullet in self.bullet_group:
+                    bullet.scroll_x = scroll[0]
+                    bullet.scroll_y = scroll[1]
+            
             settings.screen.fill(settings.bg_color)
             self.game_manager.run_game()
             tile_map.draw_map(scroll[0], scroll[1])

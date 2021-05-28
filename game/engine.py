@@ -60,17 +60,20 @@ class CharacterBlock(pygame.sprite.Sprite): # classe base
         self.rect = self.image.get_rect()
         self.rect.center = [x_pos, y_pos]
 
-class Enemy(AnimatedBlock):
-    def __init__(self, base_images_path, number_of_images, x_pos, y_pos, resize, sprite_speed, tiles, player):
-        super().__init__(base_images_path, number_of_images, x_pos, y_pos, resize)
+class Enemy(CharacterBlock):
+    def __init__(self, base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize, sprite_speed, tiles, player):
+        super().__init__(base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize)
         self.CHASING_PLAYER = False
+        self.FACING_RIGHT = True
+        self.FACING_LEFT = False
         self.speed = random.uniform(1, 3)
         self.sprite_speed = sprite_speed 
         self.movement_y = 0 
-        self.movement_x = self.speed
+        self.movement_x = self.speed * 1.25
         self.tiles = tiles
         self.player = player
-        self.life = 3
+        self.initial_life = random.randint(10, 15)
+        self.life = self.initial_life
         self.momentum_y = 0
         self.air_timer = 0   
         self.scroll_x = 0
@@ -83,33 +86,50 @@ class Enemy(AnimatedBlock):
             self.kill() 
 
     def update(self):
+        if (self.life == 0):
+            self.kill()
+
         self.current_sprite += self.sprite_speed
 
-        if self.current_sprite >= len(self.sprites):
+        if self.current_sprite >= len(self.sprites_left):
             self.current_sprite = 0
 
-        self.image = self.sprites[int(self.current_sprite)]
+        if self.FACING_RIGHT:
+            self.image = self.sprites_right[int(self.current_sprite)]
+        elif self.FACING_LEFT:
+            self.image = self.sprites_left[int(self.current_sprite)]
 
         self.draw_enemy()
         
         self.screen_constrain()
     
     def enemy_ai(self):
-        if not self.CHASING_PLAYER and abs(self.player.sprite.rect.x - self.rect.x) <= 100:
+        if not self.CHASING_PLAYER and abs(self.player.sprite.rect.x - self.rect.x) <= 200:
             self.CHASING_PLAYER = True
 
         if self.CHASING_PLAYER:
             if self.player.sprite.rect.x >= self.rect.x:
+                self.FACING_RIGHT = True
+                self.FACING_LEFT = False
                 self.movement_x = self.speed * 1.25
+
             else:
+                self.FACING_RIGHT = False
+                self.FACING_LEFT = True
                 self.movement_x = -self.speed 
-        elif abs(self.initial_x_position - self.rect.x) >= 200:
-            if abs(self.movement_x) > 0:
-                self.movement_x *= -1
-            else:
-                self.movement_x = self.speed
+
         else:
-            self.movement_x = 0   
+            if self.FACING_RIGHT and (self.rect.x - self.initial_x_position) <= 200:
+                self.movement_x = self.speed * 1.5
+            else:
+                self.FACING_RIGHT = False
+                self.FACING_LEFT = True
+
+            if self.FACING_LEFT and (self.rect.x - self.initial_x_position) >= -200:
+                self.movement_x = -self.speed
+            else:
+                self.FACING_RIGHT = True
+                self.FACING_LEFT = False
     
     def draw_enemy(self):
         enemy_movement = [0, 0]
@@ -164,13 +184,12 @@ class Enemy(AnimatedBlock):
         return collision_types
 
 class Player(CharacterBlock):
-    def __init__(self, base_images_path_left, base_images_path_right,number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles, enemy_group, default_image):
+    def __init__(self, base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize, speed, sprite_speed, tiles, enemy_group):
         super().__init__(base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize)
         self.LEFT_KEY = False
         self.RIGHT_KEY = False
         self.FACING_LEFT = False
         self.FACING_RIGHT = True
-        self.RESTING = True
         self.SHOOTING = False
         self.speed = speed
         self.sprite_speed = sprite_speed 
@@ -185,23 +204,21 @@ class Player(CharacterBlock):
         self.scroll_y = 0
         self.friction_right, self.friction_left = -.045, -.1
         self.acceleration = 0
-        self.default_image = 0
+        self.player_shooting = [pygame.image.load('assets/player/shootingR.png'), pygame.image.load('assets/player/shootingL.png')]
+        self.player_standing = [pygame.image.load('assets/player/standingR.png'), pygame.image.load('assets/player/standingL.png')]
     
-
-    def set_Default_img(self,base_image_path,resize):
-            image_path = base_image_path #path da imagem com nome do arquivo e tipo
-            image = pygame.image.load(image_path).convert_alpha()
-            resized_image = pygame.transform.scale(image, (int(image.get_rect().width * resize), int(image.get_rect().height * resize)))
-            return resized_image
-            #image = pygame.image.load('/feira/banana.png').convert_alpha()
-
-
     def screen_constrain(self):
         if self.rect.bottom >= settings.screen_height:
-            self.rect.bottom = 0 
+            self.life = 0
 
     def update(self):
-        if self.movement_x > 0.8 or self.movement_x < -0.1: # se movendo pra frente ou tras 
+        if self.SHOOTING:
+            if self.FACING_RIGHT:
+                self.image = self.player_shooting[0]
+            if self.FACING_LEFT:
+                self.image = self.player_shooting[1]
+
+        elif self.movement_x > 0.8 or self.movement_x < -0.1:
             self.current_sprite += self.sprite_speed
 
             if self.current_sprite >= len(self.sprites_left):
@@ -211,34 +228,17 @@ class Player(CharacterBlock):
                 self.image = self.sprites_right[int(self.current_sprite)]
             elif self.FACING_LEFT:
                 self.image = self.sprites_left[int(self.current_sprite)]
-        else: #parado
-
+        else:
             self.current_sprite = 0
             if self.FACING_RIGHT:
-                self.image = self.set_Default_img('./assets/player/player1_R.png',1)
+                self.image = self.player_standing[0]
             elif self.FACING_LEFT:
-                self.image = self.set_Default_img('./assets/player/player1_L.png',1)
-
-            if self.FACING_RIGHT and self.SHOOTING:
-                self.image = self.set_Default_img('./assets/player/player_shootR.png',1)
-            elif self.FACING_LEFT and self.SHOOTING:
-                self.image = self.set_Default_img('./assets/player/player_shootL.png',1)
-            
-
+                self.image = self.player_standing[1]
 
         self.draw_player()  
         self.screen_constrain()
         self.collision()
 
-
-        '''
-        else: #parado
-            self.current_sprite = 0
-            if self.FACING_RIGHT:
-                self.image = self.sprites_right[0]
-            elif self.FACING_LEFT:
-                self.image = self.sprites_left[0]
-        '''
     def collision(self):
         if pygame.sprite.spritecollide(self, self.enemy_group, False):
             collided_enemies = pygame.sprite.spritecollide(
@@ -249,7 +249,7 @@ class Player(CharacterBlock):
             for collided_enemy in collided_enemies:
                 collided_enemy.kill()
                 self.life -= 1
-    
+
     def draw_player(self):
         self.horizontal_movement()
         player_movement = [0, 0]
@@ -324,6 +324,44 @@ class Player(CharacterBlock):
                 collision_types['top'] = True
         return collision_types
 
+class Bullet(Block):
+    def __init__(self, image_path, x_pos, y_pos, shoot_speed, enemy_group, player_group):
+        super().__init__(image_path, x_pos, y_pos)
+        self.is_active = False
+        self.shoot_speed = shoot_speed
+        self.enemy_group = enemy_group
+        self.player_group = player_group
+        self.scroll_x = 0
+        self.scroll_y = 0
+        self.initial_pos_x = x_pos
+
+    def update(self):
+        self.rect.x += self.shoot_speed
+        self.draw_bullet()
+        self.collision()
+
+    def draw_bullet(self):
+        settings.display.blit(self.image,(self.rect.x-self.scroll_x,self.rect.y-self.scroll_y))
+
+    def collision(self):
+        if abs(self.initial_pos_x - self.rect.x) >= 700:
+            self.kill()
+
+        # definição da colisão
+        if pygame.sprite.spritecollide(self, self.enemy_group, False):
+            collided_enemies = pygame.sprite.spritecollide(
+                self, self.enemy_group, False)
+
+            settings.score += 100 * len(collided_enemies)
+            pygame.mixer.Sound.play(settings.destroy_sound)
+
+            for collided_enemy in collided_enemies:
+                self.kill()
+                if collided_enemy.life - 1 == 0:
+                    settings.score += 100 * collided_enemy.initial_life
+
+                collided_enemy.life -= 1
+
 class AutoMovingBackground(Block):
     def __init__(self, image_path, x_pos, y_pos, moving_speed):
         super().__init__(image_path, x_pos, y_pos)
@@ -341,16 +379,54 @@ class AutoMovingBackground(Block):
             settings.screen.blit(self.image, (self.relative_x, 0))
 
 class GameManager():
-    def __init__(self, player_group, enemy_group):
+    def __init__(self, player_group, enemy_group, bullet_group):
         self.player_group = player_group
         self.enemy_group = enemy_group
+        self.bullet_group = bullet_group
     
     def run_game(self):
         self.player_group.update()
         self.enemy_group.update()
+        self.bullet_group.update()
+
+        self.draw_score()
+        self.draw_life()
 
     def reset_game(self):
-        print("")
+        for player in self.player_group.sprites():
+            player.kill()
+
+        for bullet in self.bullet_group.sprites():
+            bullet.kill()
+        
+        for enemy in self.enemy_group.sprites():
+            enemy.kill()
+
+    def draw_score(self):
+        player_score = settings.basic_font.render(
+            "SCORE " + str(settings.score), True, settings.font_color)
+
+        player_score_rect = player_score.get_rect(
+            midleft=(10, 20))
+
+        settings.display.blit(player_score, player_score_rect)
+
+    def draw_life(self):
+        lifes_text = settings.basic_font.render(    
+            "LIFES ", True, settings.font_color)
+
+        if (self.player_group.sprite):
+            self.draw_heart(self.player_group.sprite.life)
+
+        lifes_text_rect = lifes_text.get_rect(
+            midleft=(10, 46))
+
+        settings.display.blit(lifes_text, lifes_text_rect)
+    
+    def draw_heart(self, life):
+        heart = pygame.image.load('assets/heart.png')
+        for i in range(life):
+            settings.display.blit(heart, (i * 32 + 100, 32))
 
 class Mouse(pygame.sprite.Sprite):
     def __init__(self):

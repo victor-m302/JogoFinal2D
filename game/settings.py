@@ -13,7 +13,7 @@ screen_height = 720  # altura
 
 screen = pygame.display.set_mode((screen_width, screen_height), 0, 32)
 
-display = pygame.Surface((960, 720))
+display = pygame.Surface((800, 500))
 
 pygame.display.set_caption("Journey in the Land of Zombies | ゾンビの国の旅")  # titulo
 
