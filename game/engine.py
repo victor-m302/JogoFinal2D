@@ -61,12 +61,13 @@ class CharacterBlock(pygame.sprite.Sprite): # classe base
         self.rect.center = [x_pos, y_pos]
 
 class Enemy(CharacterBlock):
-    def __init__(self, base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize, sprite_speed, tiles, player):
+    def __init__(self, base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize, sprite_speed, tiles, player, zombie_type):
         super().__init__(base_images_path_left, base_images_path_right, number_of_images, x_pos, y_pos, resize)
         self.CHASING_PLAYER = False
         self.FACING_RIGHT = True
         self.FACING_LEFT = False
-        self.speed = random.uniform(1, 3)
+        self.JUMPING = False
+        self.speed = random.uniform(1, 2)
         self.sprite_speed = sprite_speed 
         self.movement_y = 0 
         self.movement_x = self.speed * 1.25
@@ -80,9 +81,11 @@ class Enemy(CharacterBlock):
         self.scroll_y = 0
         self.initial_x_position = x_pos
         self.initial_y_position = y_pos
+        self.zombie_type = zombie_type
+        self.jump_time = pygame.time.get_ticks() 
     
     def screen_constrain(self):
-        if self.rect.bottom >= settings.screen_height:
+        if self.rect.bottom >= settings.screen_height + settings.collision_wall:
             self.kill() 
 
     def update(self):
@@ -104,16 +107,25 @@ class Enemy(CharacterBlock):
         self.screen_constrain()
     
     def enemy_ai(self):
-        if not self.CHASING_PLAYER and abs(self.player.sprite.rect.x - self.rect.x) <= 200:
+        if not self.CHASING_PLAYER and abs(abs(self.player.sprite.rect.x) - abs(self.rect.x)) <= 200 and abs(abs(self.player.sprite.rect.y) - abs(self.rect.y)) <= 50:
             self.CHASING_PLAYER = True
+        else:
+            self.CHASING_PLAYER = False
+
+        if self.zombie_type == 3:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.jump_time >= 1400 and not self.JUMPING:
+                self.momentum_y = -3
+                self.jump_time = pygame.time.get_ticks()
+                self.JUMPING = True
 
         if self.CHASING_PLAYER:
-            if self.player.sprite.rect.x >= self.rect.x:
+            if self.player.sprite.rect.x > self.rect.x + 10:
                 self.FACING_RIGHT = True
                 self.FACING_LEFT = False
                 self.movement_x = self.speed * 1.25
 
-            else:
+            if self.player.sprite.rect.x < self.rect.x + 10:
                 self.FACING_RIGHT = False
                 self.FACING_LEFT = True
                 self.movement_x = -self.speed 
@@ -149,6 +161,7 @@ class Enemy(CharacterBlock):
         if collisions['bottom']:
             self.momentum_y = 0
             self.air_timer = 0
+            self.JUMPING = False
         else:
             self.air_timer += 1
 
@@ -191,12 +204,13 @@ class Player(CharacterBlock):
         self.FACING_LEFT = False
         self.FACING_RIGHT = True
         self.SHOOTING = False
+        self.PASSED_LEVEL = False
         self.speed = speed
         self.sprite_speed = sprite_speed 
         self.enemy_group = enemy_group
         self.movement_y = 0 
         self.movement_x = 0 
-        self.life = 3
+        self.life = 5
         self.momentum_y = 0
         self.air_timer = 0   
         self.tiles = tiles
@@ -208,7 +222,9 @@ class Player(CharacterBlock):
         self.player_standing = [pygame.image.load('assets/player/standingR.png'), pygame.image.load('assets/player/standingL.png')]
     
     def screen_constrain(self):
-        if self.rect.bottom >= settings.screen_height:
+        if self.rect.right >= settings.level_collision:
+            self.PASSED_LEVEL = True
+        if self.rect.bottom >= settings.screen_height + settings.collision_wall:
             self.life = 0
 
     def update(self):

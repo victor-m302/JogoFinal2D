@@ -13,7 +13,7 @@ screen_height = 720  # altura
 
 screen = pygame.display.set_mode((screen_width, screen_height), 0, 32)
 
-display = pygame.Surface((800, 500))
+display = pygame.Surface((600, 400))
 
 pygame.display.set_caption("Journey in the Land of Zombies | ゾンビの国の旅")  # titulo
 
@@ -36,3 +36,14 @@ zombie_theme = pygame.mixer.Sound("audio/zombiegame_low_audio.mp3")
 # score do jogo
 score = 0
 moving_bg = 0
+
+# collision wall
+collision_level = 0
+collision_wall = 0
+
+
+# FASE 01 - TOTAL 288x48 == 239x48
+# FASE 02 - 80 x 32
+# FASE 03 - 144 x 64 - 144 x 58
+# FASE 04 - 103 x 80 - 103 x 67
+# FASE 05 - 160 x 32 - 160 x 17
